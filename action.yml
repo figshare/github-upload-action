@@ -1,0 +1,28 @@
+name: "figshare upload action"
+description: "Upload files to figshare.com"
+author: "figshare"
+branding:
+  icon: "upload-cloud"
+  color: "#a9c518"
+
+inputs:
+  FIGSHARE_TOKEN:
+    required: true
+    description: "figshare personal access token"
+
+  FIGSHARE_ENDPOINT:
+    required: true
+    description: "figshare API endpoint"
+    default: "https://api.figshare.com/v2"
+
+  FIGSHARE_ARTICLE_ID:
+    required: true
+    description: "existing figshare article id"
+
+  DATA_DIR:
+    required: true
+    description: "directory with files to upload"
+
+runs:
+  using: "node12"
+  main: "dist/index.js"
