@@ -7,7 +7,8 @@
   "repository": "https://github.com/figshare/github-upload-action",
   "author": "Daniel Gavrila <danielduduta@figshare.com>",
   "scripts": {
-    "package": "ncc build index.js -o dist"
+    "package": "ncc build index.js -o dist",
+    "eslint": "eslint ./ --ext=js,mjs"
   },
   "dependencies": {
     "@actions/core": "^1.2.6",
