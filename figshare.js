@@ -19,6 +19,7 @@ class FigshareAPI {
     const articleUrl = `${this.endpoint}/${this.articlePathPrefix}/${articleID}`;
     let articleData = await fetch(articleUrl, { headers: this.headers });
     articleData = await articleData.json();
+
     return articleData;
   }
 
@@ -34,10 +35,12 @@ class FigshareAPI {
       headers: this.headers,
     });
     const jsonData = await fData.json();
+
     const fileUrl = jsonData.location;
     const fileRequest = await fetch(fileUrl, { headers: this.headers });
     const fileResponse = await fileRequest.json();
     fileResponse.localPath = fileData.path;
+
     return fileResponse;
   }
 
@@ -45,25 +48,22 @@ class FigshareAPI {
     const partsRequest = await fetch(fileURL);
     let partsData = await partsRequest.json();
     partsData = partsData.parts;
+
     return partsData;
   }
 
-  async uploadFilePartContent(uploadURL, partData, partContent) {
+  async uploadFilePartContent(uploadURL, partData, body) {
     const uploadPartURL = `${uploadURL}/${partData.partNo}`;
-    const uploadRequest = await fetch(uploadPartURL, {
-      method: 'put',
-      body: partContent,
-    });
+    const uploadRequest = await fetch(uploadPartURL, { method: 'put', body });
+
     return uploadRequest.ok;
   }
 
   async completeFileUpload(articleID, fileData) {
     const fileID = fileData.id;
     const fileURL = `${this.endpoint}/${this.articlePathPrefix}/${articleID}/${this.filePathPrefix}/${fileID}`;
-    await fetch(fileURL, {
-      method: 'post',
-      headers: this.headers,
-    });
+    await fetch(fileURL, { method: 'post', headers: this.headers });
+
     return fileData;
   }
 }
