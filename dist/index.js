@@ -26,6 +26,7 @@ class FigshareAPI {
     const articleUrl = `${this.endpoint}/${this.articlePathPrefix}/${articleID}`;
     let articleData = await fetch(articleUrl, { headers: this.headers });
     articleData = await articleData.json();
+
     return articleData;
   }
 
@@ -41,10 +42,12 @@ class FigshareAPI {
       headers: this.headers,
     });
     const jsonData = await fData.json();
+
     const fileUrl = jsonData.location;
     const fileRequest = await fetch(fileUrl, { headers: this.headers });
     const fileResponse = await fileRequest.json();
     fileResponse.localPath = fileData.path;
+
     return fileResponse;
   }
 
@@ -52,25 +55,22 @@ class FigshareAPI {
     const partsRequest = await fetch(fileURL);
     let partsData = await partsRequest.json();
     partsData = partsData.parts;
+
     return partsData;
   }
 
-  async uploadFilePartContent(uploadURL, partData, partContent) {
+  async uploadFilePartContent(uploadURL, partData, body) {
     const uploadPartURL = `${uploadURL}/${partData.partNo}`;
-    const uploadRequest = await fetch(uploadPartURL, {
-      method: 'put',
-      body: partContent,
-    });
+    const uploadRequest = await fetch(uploadPartURL, { method: 'put', body });
+
     return uploadRequest.ok;
   }
 
   async completeFileUpload(articleID, fileData) {
     const fileID = fileData.id;
     const fileURL = `${this.endpoint}/${this.articlePathPrefix}/${articleID}/${this.filePathPrefix}/${fileID}`;
-    await fetch(fileURL, {
-      method: 'post',
-      headers: this.headers,
-    });
+    await fetch(fileURL, { method: 'post', headers: this.headers });
+
     return fileData;
   }
 }
@@ -91,24 +91,14 @@ const md5File = __nccwpck_require__(446);
 
 const FigshareAPI = __nccwpck_require__(49);
 
-const FIGSHARE_TOKEN = core.getInput('FIGSHARE_TOKEN', {
-  required: true,
-});
-
-const FIGSHARE_ENDPOINT = core.getInput('FIGSHARE_ENDPOINT', {
-  required: true,
-});
-
-const FIGSHARE_ARTICLE_ID = core.getInput('FIGSHARE_ARTICLE_ID', {
-  required: true,
-});
-
-const DATA_DIR = core.getInput('DATA_DIR', {
-  required: true,
-});
+const FIGSHARE_TOKEN = core.getInput('FIGSHARE_TOKEN', { required: true });
+const FIGSHARE_ENDPOINT = core.getInput('FIGSHARE_ENDPOINT', { required: true });
+const FIGSHARE_ARTICLE_ID = core.getInput('FIGSHARE_ARTICLE_ID', { required: true });
+const DATA_DIR = core.getInput('DATA_DIR', { required: true });
 
 function getFileInfo(filePath) {
   const fileStats = fs.statSync(filePath);
+
   return {
     size: fileStats.size,
     name: path.basename(filePath),
@@ -120,23 +110,24 @@ function getFileInfo(filePath) {
 async function uploadFileContent(fAPI, fileData) {
   const fileURL = fileData.upload_url;
   core.info(`Working on file ${fileData.id} - ${fileURL}`);
+
   const filePath = fileData.localPath;
   const fileParts = await fAPI.getFilePartsInfo(fileURL);
-  const doneParts = [];
-  for (let index = 0; index < fileParts.length; index += 1) {
-    const pData = fileParts[index];
-    const pRead = fs.createReadStream(filePath, {
-      start: pData.startOffset,
-      end: pData.endOffset,
-    });
-    doneParts.push(fAPI.uploadFilePartContent(fileURL, pData, pRead));
+  const doneParts = fileParts.map((pData) => {
     core.info(`Started part ${pData.partNo} for ${fileData.id} - ${fileURL}`);
-  }
+
+    const { startOffset: start, endOffset: end } = pData;
+    const pRead = fs.createReadStream(filePath, { start, end });
+
+    return fAPI.uploadFilePartContent(fileURL, pData, pRead);
+  });
+
   const results = await Promise.all(doneParts);
   const failedStatus = results.filter((res) => res === false);
   if (failedStatus.length > 0) {
     throw new Error(`Unexpected error uploadFileContent on ${fileData.id} - ${fileURL}`);
   }
+
   core.info(`Completed parts upload for ${fileData.id} - ${fileURL}`);
 }
 
@@ -151,44 +142,36 @@ async function run() {
   const figFiles = async () => {
     return Promise.all(localFiles.map((ff) => {
       core.info(`Found file ${ff.name} to upload`);
+
       return fAPI.initiateFileUpload(articleData.id, ff);
     }));
   };
   const fileEntries = await figFiles();
 
-  const fParts = async () => {
-    return Promise.all(fileEntries.map((ff) => {
-      return uploadFileContent(fAPI, ff);
-    }));
-  };
-  await fParts();
+  const uploadPromises = fileEntries.map((file) => uploadFileContent(fAPI, file));
+  await Promise.all(uploadPromises);
 
-  const completeFiles = async () => {
-    return Promise.all(fileEntries.map((ff) => {
-      return fAPI.completeFileUpload(FIGSHARE_ARTICLE_ID, ff);
-    }));
-  };
-  const completedFiles = await completeFiles();
+  const completePromises = fileEntries.map((file) => fAPI.completeFileUpload(FIGSHARE_ARTICLE_ID, file));
+  const completedFiles = await Promise.all(completePromises);
 
   return completedFiles;
 }
 
 async function init() {
-  const completed = await run();
-  return completed;
-}
+  try {
+    const completed = await run();
 
-init()
-  .then((completed) => {
     completed.forEach((ff) => {
       core.info(`Successfully uploaded file ${ff.download_url}`);
       core.setOutput(`uploaded_file_${ff.id}`, ff.download_url);
     });
-  })
-  .catch((err) => {
+  } catch (err) {
     core.error(err);
     core.setFailed(err.message);
-  });
+  }
+}
+
+init();
 
 
 /***/ }),

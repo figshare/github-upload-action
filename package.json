@@ -5,7 +5,7 @@
   "main": "index.js",
   "license": "MIT",
   "repository": "https://github.com/figshare/github-upload-action",
-  "author": "Daniel Gavrila <danielduduta@figshare.com>",
+  "author": "Daniel Gavrila",
   "scripts": {
     "package": "ncc build index.js -o dist",
     "eslint": "eslint ./ --ext=js,mjs"
