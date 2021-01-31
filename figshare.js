@@ -3,6 +3,15 @@
 
 const fetch = require('node-fetch');
 
+const FigshareAPIError = require('./error');
+
+async function parseErrorResponse(resp) {
+  const errStatus = resp.statusText;
+  const errText = await resp.text();
+
+  return `${errStatus}: ${errText}`;
+}
+
 class FigshareAPI {
   constructor(token, endpoint) {
     this.token = token;
@@ -18,6 +27,13 @@ class FigshareAPI {
   async getArticle(articleID) {
     const articleUrl = `${this.endpoint}/${this.articlePathPrefix}/${articleID}`;
     let articleData = await fetch(articleUrl, { headers: this.headers });
+
+    // possible configuration issue / invalid token
+    if (!articleData.ok) {
+      const message = await parseErrorResponse(articleData);
+      throw new FigshareAPIError(message);
+    }
+
     articleData = await articleData.json();
 
     return articleData;
@@ -34,6 +50,13 @@ class FigshareAPI {
       }),
       headers: this.headers,
     });
+
+    // possible quota limitation
+    if (!fData.ok) {
+      const message = await parseErrorResponse(fData);
+      throw new FigshareAPIError(message);
+    }
+
     const jsonData = await fData.json();
 
     const fileUrl = jsonData.location;

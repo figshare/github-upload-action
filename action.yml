@@ -3,7 +3,7 @@ description: "Upload files to figshare.com"
 author: "figshare"
 branding:
   icon: "upload-cloud"
-  color: "#a9c518"
+  color: "blue"
 
 inputs:
   FIGSHARE_TOKEN:
