@@ -2,6 +2,21 @@ module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ 524:
+/***/ ((module) => {
+
+class FigshareAPIError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'FigshareAPIError';
+  }
+}
+
+module.exports = FigshareAPIError;
+
+
+/***/ }),
+
 /***/ 49:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -9,6 +24,15 @@ module.exports =
 /* eslint quote-props: ["error", "consistent-as-needed"] */
 
 const fetch = __nccwpck_require__(467);
+
+const FigshareAPIError = __nccwpck_require__(524);
+
+async function parseErrorResponse(resp) {
+  const errStatus = resp.statusText;
+  const errText = await resp.text();
+
+  return `${errStatus}: ${errText}`;
+}
 
 class FigshareAPI {
   constructor(token, endpoint) {
@@ -25,6 +49,13 @@ class FigshareAPI {
   async getArticle(articleID) {
     const articleUrl = `${this.endpoint}/${this.articlePathPrefix}/${articleID}`;
     let articleData = await fetch(articleUrl, { headers: this.headers });
+
+    // possible configuration issue / invalid token
+    if (!articleData.ok) {
+      const message = await parseErrorResponse(articleData);
+      throw new FigshareAPIError(message);
+    }
+
     articleData = await articleData.json();
 
     return articleData;
@@ -41,6 +72,13 @@ class FigshareAPI {
       }),
       headers: this.headers,
     });
+
+    // possible quota limitation
+    if (!fData.ok) {
+      const message = await parseErrorResponse(fData);
+      throw new FigshareAPIError(message);
+    }
+
     const jsonData = await fData.json();
 
     const fileUrl = jsonData.location;
