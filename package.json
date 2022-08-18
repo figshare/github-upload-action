@@ -11,7 +11,7 @@
     "eslint": "eslint ./ --ext=js,mjs"
   },
   "dependencies": {
-    "@actions/core": "^1.2.6",
+    "@actions/core": "^1.9.1",
     "md5-file": "^5.0.0",
     "node-fetch": "^2.6.1"
   },
